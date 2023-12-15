@@ -7,9 +7,9 @@ class DB:
         self.accounts = self.db.accounts
 
     def login(self, username, password):
-        if self.does_user_exist(username, password):
+        if self.does_user_exist(username):
            if self.correct_password(username, password):
-               return True    
+               return True   
         return False
     def does_user_exist(self, username):
         accounts_cursor = self.accounts.find({"username": username})
@@ -23,7 +23,8 @@ class DB:
         exist = self.does_user_exist(username)
         if not exist:
             self.accounts.insert_one({"username": username, "password": password})
-
+            return True
+        return False
     def correct_password(self, username, password):
         accounts_cursor = self.accounts.find({"username": username})
         found_accounts = list(accounts_cursor)

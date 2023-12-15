@@ -2,8 +2,8 @@ import socket
 import threading
 import db
 
-
 #CONSTANTS#
+DB = db.DB()
 HEADER = 64
 SERVER = socket.gethostbyname(socket.gethostname())
 PORT = 5000
@@ -11,8 +11,69 @@ FORMAT = 'utf-8'
 ADDRESS = (SERVER, PORT)
 DISCONNECT = "!DISCONNECT"
 
+def handle_login():
+    msg_length = conn.recv(HEADER).decode(FORMAT)
+    if msg_length:
+        msg_length = int(msg_length)
+        msg = conn.recv(msg_length).decode(FORMAT)
+        
+        username = ""
+        password = ""
+        count = 0
 
-db = db.DB()
+        while msg[count] != '|':
+            username += msg[count]
+            count += 1
+        password = msg[count+1:]
+
+        login = DB.login(username, password)
+
+        response = ""
+        if login:
+            response = "Success"
+        else:
+            response = "Fail"
+
+        encoded_response = response.encode(FORMAT)
+        msg_length = len(encoded_response)
+        encoded_msg_length = str(msg_length).encode(FORMAT)
+        encoded_msg_length += b' ' * (HEADER - len(encoded_msg_length))
+
+        conn.send(encoded_msg_length)
+        conn.send(encoded_response)
+        print(login)
+
+def handle_register():
+    msg_length = conn.recv(HEADER).decode(FORMAT)
+    if msg_length:
+        msg_length = int(msg_length)
+        msg = conn.recv(msg_length).decode(FORMAT)
+        
+        username = ""
+        password = ""
+        count = 0
+
+        while msg[count] != '|':
+            username += msg[count]
+            count += 1
+        password = msg[count+1:]
+
+        register = DB.register(username, password)
+
+        response = ""
+        if register:
+            response = "Success"
+        else:
+            response = "Fail"
+
+        encoded_response = response.encode(FORMAT)
+        msg_length = len(encoded_response)
+        encoded_msg_length = str(msg_length).encode(FORMAT)
+        encoded_msg_length += b' ' * (HEADER - len(encoded_msg_length))
+
+        conn.send(encoded_msg_length)
+        conn.send(encoded_response)
+
 # Whenever a client connects
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
@@ -22,22 +83,20 @@ def handle_client(conn, addr):
         msg_length = conn.recv(HEADER).decode(FORMAT)
         if msg_length:
             msg_length = int(msg_length)
-            # Get the actual message
             msg = conn.recv(msg_length).decode(FORMAT)
 
             if msg == "Login":
-                msg_length = conn.recv(HEADER).decode(FORMAT)
-                if msg_length:
-                    msg_length = int(msg_length)
-                    msg = conn.recv(msg_length).decode(FORMAT)
-                    print(msg)
-            if msg == DISCONNECT:
+                handle_login()
+            elif msg == "Register":
+                handle_register()
+            elif msg == DISCONNECT:
                 connected = False
-            print(f"[{addr}] {msg}")
+            #print(f"[{addr}] {msg}")
     conn.close()
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     print("STARTING SERVER")
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     # Bind the IP address and Port number to this server and start listening
     server.bind(ADDRESS)
     server.listen()
