@@ -26,13 +26,13 @@ def handle_login():
             count += 1
         password = msg[count+1:]
 
-        login = DB.login(username, password)
+        login, msg = DB.login(username, password)
 
         response = ""
         if login:
             response = "Success"
         else:
-            response = "Fail"
+            response = msg
 
         encoded_response = response.encode(FORMAT)
         msg_length = len(encoded_response)
@@ -41,7 +41,6 @@ def handle_login():
 
         conn.send(encoded_msg_length)
         conn.send(encoded_response)
-        print(login)
 
 def handle_register():
     msg_length = conn.recv(HEADER).decode(FORMAT)
@@ -64,7 +63,7 @@ def handle_register():
         if register:
             response = "Success"
         else:
-            response = "Fail"
+            response = "User already exists"
 
         encoded_response = response.encode(FORMAT)
         msg_length = len(encoded_response)
@@ -91,9 +90,7 @@ def handle_client(conn, addr):
                 handle_register()
             elif msg == DISCONNECT:
                 connected = False
-            #print(f"[{addr}] {msg}")
     conn.close()
-
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     print("STARTING SERVER")
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -106,7 +103,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         conn, addr = server.accept()
         # Run the handle_client function in a new thread to allow multiple users connected at the same time
         thread = threading.Thread(target=handle_client, args=(conn, addr))
-        thread.start()
-        print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")        
+        thread.start()        
 
 

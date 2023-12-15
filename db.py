@@ -9,8 +9,10 @@ class DB:
     def login(self, username, password):
         if self.does_user_exist(username):
            if self.correct_password(username, password):
-               return True   
-        return False
+               return True,""
+           else:
+               return False, "Incorrect Password"
+        return False, "Username doesn't exist"
     def does_user_exist(self, username):
         accounts_cursor = self.accounts.find({"username": username})
         found_accounts = list(accounts_cursor)

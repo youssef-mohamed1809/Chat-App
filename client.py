@@ -42,8 +42,9 @@ def receive_login_response():
         res = client.recv(length).decode(FORMAT)
         if res == "Success":
             print("Login Success")
-        elif res == "Fail":
-            print("Login Failed")
+        else:
+            print(res + "\n\n\n")
+            main()
 
 def send_register_message(username, password):
     message_type = "Register"
@@ -72,29 +73,32 @@ def receive_register_response():
         res = client.recv(length).decode(FORMAT)
         if res == "Success":
             print("Account Created Successfuly")
-        elif res == "Fail":
-            print("An Error Occurred")
+        else:
+            print(res + "\n\n\n")
+            main()
 
 
 def main():
-    print("Welcome, please choose one of the following options: ")
+    print("Please choose one of the following options: ")
     print("1. Login")
     print("2. Register")
-    choice = int(input())
-    while choice != 1 and choice != 2:
+    print("3. Disconnect")
+    choice = int(input("Option: "))
+    while choice != 1 and choice != 2 and choice != 3:
         choice = int(input("Please choose a valid option: "))
     if choice == 1:
         username = input("Please enter your username: ")
         password = input("Please enter your password: ")
-
         send_login_message(username, password)
     elif choice == 2:
         username = input("Please enter a unique username: ")
         password = input("Please enter a strong password: ")
-
         send_register_message(username, password)
+    elif choice == 3:
+        send_message(DISCONNECT)
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
     client.connect(ADDRESS)
+    print("Welcome!")
     main()
