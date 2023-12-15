@@ -1,4 +1,5 @@
-This repositiory is for the CSE351:Computer Networks course
+This repositiory is for the CSE351:Computer Networks course.
+
 The goal of this project is to design and implement a robust Peer-to-Peer Multi-User Chatting
 Application using Python and sockets. The application aims to emulate features similar to popular
 platforms like Clubhouse, but with a focus on text-based communication. The project will be divided
