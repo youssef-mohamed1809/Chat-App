@@ -11,6 +11,8 @@ FORMAT = 'utf-8'
 ADDRESS = (SERVER, PORT)
 DISCONNECT = "!DISCONNECT"
 
+connected_clients = []
+
 def handle_login():
     msg_length = conn.recv(HEADER).decode(FORMAT)
     if msg_length:
