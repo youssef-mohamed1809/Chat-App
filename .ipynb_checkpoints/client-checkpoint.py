@@ -76,13 +76,25 @@ def receive_register_response():
         else:
             print(res + "\n\n\n")
             main()
+            
+def print_green_text(text):
+    print("\033[92m" + text + "\033[0m")
+
+def print_red_text(text):
+    print("\033[91m" + text + "\033[0m")
+
+def print_blue_text(text):
+    print("\033[94m" + text + "\033[0m")
+
+def print_yellow_text(text):
+    print("\033[93m" + text + "\033[0m")
 
 
 def main():
     print("Please choose one of the following options: ")
-    print("1. Login")
-    print("2. Register")
-    print("3. Disconnect")
+    print_green_text("1. Login")
+    print_green_text("2. Register")
+    print_red_text("3. Disconnect")
     choice = int(input("Option: "))
     while choice != 1 and choice != 2 and choice != 3:
         choice = int(input("Please choose a valid option: "))
