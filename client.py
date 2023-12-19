@@ -7,6 +7,8 @@ FORMAT = 'utf-8'
 ADDRESS = (SERVER, PORT)
 DISCONNECT = "!DISCONNECT"
 
+logged_in = False   
+
 def send_message(message):
     encoded_message = message.encode(FORMAT)
     msg_length = len(encoded_message)
@@ -40,8 +42,10 @@ def receive_login_response():
     length = int(client.recv(HEADER).decode(FORMAT))
     if length:
         res = client.recv(length).decode(FORMAT)
+        global logged_in
         if res == "Success":
             print("Login Success")
+            logged_in = True
         else:
             print(res + "\n\n\n")
             main()
@@ -78,13 +82,34 @@ def receive_register_response():
             main()
 
 
+def view_online_users():
+    if not logged_in:
+        print("You need to log in first.")
+        return
+
+    message_type = "ViewOnlineUsers"
+    encoded_message_type = message_type.encode(FORMAT)
+    msg_type_length = len(encoded_message_type)
+    encoded_msg_type_length = str(msg_type_length).encode(FORMAT)
+    encoded_msg_type_length += b' ' * (HEADER - len(encoded_msg_type_length))
+
+    client.send(encoded_msg_type_length)
+    client.send(encoded_message_type)
+
+    length = int(client.recv(HEADER).decode(FORMAT))
+    if length:
+        res = client.recv(length).decode(FORMAT)
+        print(res)
+
+
 def main():
     print("Please choose one of the following options: ")
     print("1. Login")
     print("2. Register")
-    print("3. Disconnect")
+    print("3. View Online Users")
+    print("4. Disconnect")
     choice = int(input("Option: "))
-    while choice != 1 and choice != 2 and choice != 3:
+    while choice not in [1, 2, 3, 4]:
         choice = int(input("Please choose a valid option: "))
     if choice == 1:
         username = input("Please enter your username: ")
@@ -95,6 +120,8 @@ def main():
         password = input("Please enter a strong password: ")
         send_register_message(username, password)
     elif choice == 3:
+        view_online_users()
+    elif choice == 4:
         send_message(DISCONNECT)
 
 
