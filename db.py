@@ -5,7 +5,7 @@ class DB:
     PEPPER = "pepperoni"
     
     def __init__(self):
-        self.client = MongoClient("192.168.0.5", 27017)
+        self.client = MongoClient("172.20.10.2", 27017)
         self.db = self.client.chatapp
         self.accounts = self.db.accounts
 
@@ -26,10 +26,11 @@ class DB:
     
     def register(self, username, password):
         exist = self.does_user_exist(username)
+        print(password)
         if not exist:
             salt = bcrypt.gensalt()
             
-            hashed_password = bcrypt.hashpw((self.PEPPER+password+salt).encode('utf-8'), salt)
+            hashed_password = bcrypt.hashpw((self.PEPPER+password+salt.decode('utf-8')).encode('utf-8'), salt)
             self.accounts.insert_one({"username": username, "password": hashed_password,"salt": salt})
             return True
         return False
@@ -39,7 +40,7 @@ class DB:
 
         if len(found_accounts) > 0:
             stored_salt = found_accounts[0]['salt']
-            hashed_password_from_db = bcrypt.hashpw((self.PEPPER + password + stored_salt).encode('utf-8'), stored_salt)
+            hashed_password_from_db = bcrypt.hashpw((self.PEPPER + password + stored_salt.decode('utf-8')).encode('utf-8'), stored_salt)
             
             return hashed_password_from_db == found_accounts[0]['password']
         
