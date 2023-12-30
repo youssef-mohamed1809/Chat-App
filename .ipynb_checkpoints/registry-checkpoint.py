@@ -3,19 +3,31 @@ import threading
 import select
 import logging
 import db
+import bcrypt
+from colorama import init, Fore, Style
 from UserAuthentication import UserAuthentication
 
+# Initialize Colorama
+init(autoreset=True)
 
+def print_red_text(text):
+    
+    print(Fore.RED + text)
 
+def print_green_text(text):
 
+    print(Fore.GREEN + text)
 
-chatrooms = {}
+def print_blue_text(text):
 
+    print(Fore.BLUE + text)
+  
+ 
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
 class ClientThread(threading.Thread):
    
-    
+   
     # initializations for client thread
     def __init__(self, ip, port, tcpClientSocket):
         threading.Thread.__init__(self)
@@ -29,13 +41,8 @@ class ClientThread(threading.Thread):
         self.username = None
         self.isOnline = True
         self.udpServer = None
-        self.udpPeerAddress = None
         print("New thread started for " + ip + ":" + str(port))
        
-
-
-   
-
     def show_online_users(self):
         online_users = [username for username, thread in tcpThreads.items() if thread.isOnline]
         response = "Online Users: \n"
@@ -43,35 +50,6 @@ class ClientThread(threading.Thread):
             response += user + '\n'
         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
         self.tcpClientSocket.send(response.encode())
-    
-    def leaveRoom(self, room_name):
-        if  room_name in chatrooms and self.username in chatrooms[room_name]:
-            del chatrooms[room_name][self.username] 
-            for _, (tcp_sock, _) in chatrooms[room_name].items():
-                msg = f"LEFT {self.username}"
-                tcp_sock.send(msg.encode()) 
-
-    def createRoom(self,room_name):
-        if room_name in chatrooms:
-            response = 'room-already-exists'
-        else:
-            chatrooms[room_name] = {}
-            response = 'room-create-success'
-        return response
-    
-    def joinChatroom(self,room_name):
-        if room_name not in chatrooms:
-            response = 'room-not-found'
-        else:
-            chatrooms[room_name][self.username] = (self.tcpClientSocket, self.udpPeerAddress)
-            print("Online peers in " + room_name + "\n")
-            response = f"joined-room"
-            for username, (tcp_sock, udp_addr) in chatrooms[room_name].items():
-                if username != self.username:
-                    msg = f"JOINED {self.username} {self.udpPeerAddress[0]}:{str(self.udpPeerAddress[1])}"
-                    tcp_sock.send(msg.encode())
-                    response += f" {username}:{udp_addr[0]}:{udp_addr[1]}"
-        return response
     
     # main of the thread
     def run(self):
@@ -82,7 +60,7 @@ class ClientThread(threading.Thread):
        
         while True:
             try:
-                # waits for incoming messages from peers
+                    # waits for incoming messages from peers
                 message = self.tcpClientSocket.recv(1024).decode().split()
                 if len(message) != 0:    
                     logging.info("Received from " + self.ip + ":" + str(self.port) + " -> " + " ".join(message))            
@@ -172,38 +150,9 @@ class ClientThread(threading.Thread):
                         else:
                             self.tcpClientSocket.close()
                             break
-                    elif message[0] == "SEARCH":
-                        if db.is_account_exist(message[1]):
-                            if db.is_account_online(message[1]):
-                                peer_info = db.get_peer_ip_port(message[1])
-                                response = "search-success " + peer_info[0] + ":" + peer_info[1]
-                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                                self.tcpClientSocket.send(response.encode())
-                            else:
-                                response = "search-user-not-online"
-                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                                self.tcpClientSocket.send(response.encode())
-                        # enters if username does not exist 
-                        else:
-                            response = "search-user-not-found"
-                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                            self.tcpClientSocket.send(response.encode())
-                    
+                    #   SEARCH  #
                     elif message[0] == "SHOW_ONLINE_USERS":
                            self.show_online_users()
-                    elif message[0] == 'SHOW_CHATROOMS':
-                        message = 'show-rooms ' + ' '.join(chatrooms.keys())
-                        self.tcpClientSocket.send(message.encode())
-                    elif message[0] == "CREATE_CHATROOM":
-                        response = self.createRoom(message[1])
-                        self.tcpClientSocket.send(response.encode())
-                    elif message[0] == "JOIN_CHATROOM":
-                        response = self.joinChatroom(message[1])
-                        self.tcpClientSocket.send(response.encode())
-                    elif message[0] == "LEAVE_CHATROOM":
-                        self.leaveRoom(message[1])
-                        msg = f"room-left {message[1]}"
-                        tcpClientSocket.send(msg.encode())    
             except OSError as oErr:
                 logging.error("OSError: {0}".format(oErr))
 
@@ -243,69 +192,84 @@ class UDPServer(threading.Thread):
         self.timer.start()
  
 
-# tcp and udp server port initializations
-print("Registy started...")
-port = 15600
-portUDP = 15500
-# db initialization
-db = db.DB()
-# gets the ip address of this peer
-# first checks to get it for windows devices
-# if the device that runs this application is not windows
-# it checks to get it for macos devices
-hostname=gethostname()
-try:
-    host=gethostbyname(hostname)
-except gaierror:
-    import netifaces as ni
-    host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
-print("Registry IP address: " + host)
-print("Registry port number: " + str(port))
-# accounts list for accounts
-accounts = {}
-# tcpThreads list for online client's thread
-tcpThreads = {}
-#tcp and udp socket initializations
-tcpSocket = socket(AF_INET, SOCK_STREAM)
-udpSocket = socket(AF_INET, SOCK_DGRAM)
-tcpSocket.bind((host,port))
-udpSocket.bind((host,portUDP))
-tcpSocket.listen(5)
-# input sockets that are listened
-inputs = [tcpSocket, udpSocket]
-# log file initialization
-logging.basicConfig(filename="registry.log", level=logging.INFO)
-# as long as at least a socket exists to listen registry runs
-while inputs:
-    print("Listening for incoming connections...")
-    # monitors for the incoming connections
-    readable, writable, exceptional = select.select(inputs, [], [])
-    for s in readable:
-        # if the message received comes to the tcp socket
-        # the connection is accepted and a thread is created for it, and that thread is started
-        if s is tcpSocket:
-            tcpClientSocket, addr = tcpSocket.accept()
-            newThread = ClientThread(addr[0], addr[1], tcpClientSocket)
-            newThread.start()
-        # if the message received comes to the udp socket
-        elif s is udpSocket:
-            # received the incoming udp message and parses it
-            message, clientAddress = s.recvfrom(1024)
-            message = message.decode().split()
-            # checks if it is a hello message
-            if message[0] == "HELLO":
-                # checks if the account that this hello message
-                # is sent from is online
-                username = message[1]
-                # if username in server_context.tcpThreads and (ip, int(port)) in server_context.onlinePeers:
-                if username in tcpThreads:
-                    tcpThreads[username].resetTimeout()
-                    print("Hello is received from " + message[1])
-                    logging.info("Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(message))
-                    if tcpThreads[username].udpPeerAddress != clientAddress:
-                        tcpThreads[username].udpPeerAddress = clientAddress
+def registryMain:
+    # tcp and udp server port initializations
+    print("Registy started...")
+    port = 15600
+    portUDP = 15500
 
-# registry tcp socket is closed
-tcpSocket.close()
+    # db initialization
+    db = db.DB()
+
+    # gets the ip address of this peer
+    # first checks to get it for windows devices
+    # if the device that runs this application is not windows
+    # it checks to get it for macos devices
+    hostname=gethostname()
+    try:
+        host=gethostbyname(hostname)
+    except gaierror:
+        import netifaces as ni
+        host = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
 
 
+    print("Registry IP address: " + host)
+    print("Registry port number: " + str(port))
+
+    # onlinePeers list for online account
+    onlinePeers = {}
+    # accounts list for accounts
+    accounts = {}
+    # tcpThreads list for online client's thread
+    tcpThreads = {}
+
+    #tcp and udp socket initializations
+    tcpSocket = socket(AF_INET, SOCK_STREAM)
+    udpSocket = socket(AF_INET, SOCK_DGRAM)
+    tcpSocket.bind((host,port))
+    udpSocket.bind((host,portUDP))
+    tcpSocket.listen(5)
+
+    # input sockets that are listened
+    inputs = [tcpSocket, udpSocket]
+
+    # log file initialization
+    logging.basicConfig(filename="registry.log", level=logging.INFO)
+
+    # as long as at least a socket exists to listen registry runs
+    while inputs:
+
+        print("Listening for incoming connections...")
+        # monitors for the incoming connections
+        readable, writable, exceptional = select.select(inputs, [], [])
+        for s in readable:
+            # if the message received comes to the tcp socket
+            # the connection is accepted and a thread is created for it, and that thread is started
+            if s is tcpSocket:
+                tcpClientSocket, addr = tcpSocket.accept()
+                newThread = ClientThread(addr[0], addr[1], tcpClientSocket)
+                newThread.start()
+            # if the message received comes to the udp socket
+            elif s is udpSocket:
+                # received the incoming udp message and parses it
+                message, clientAddress = s.recvfrom(1024)
+                message = message.decode().split()
+                # checks if it is a hello message
+                if message[0] == "HELLO":
+                    # checks if the account that this hello message
+                    # is sent from is online
+                    if message[1] in tcpThreads:
+                        # resets the timeout for that peer since the hello message is received
+                        tcpThreads[message[1]].resetTimeout()
+                        print("Hello is received from " + message[1])
+                        logging.info("Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(message))
+
+    # registry tcp socket is closed
+    tcpSocket.close()
+
+
+
+    
+
+if __name__ == "__main__": 
+  registryMain()    
