@@ -14,7 +14,7 @@ def print_colorized_text(text,color,end = '\n'):
     elif color == 'YELLOW':
         print(Fore.YELLOW + text,end = end)
     else:
-        print(text,end)
+        print(text,end = end)
     
 
 

@@ -1,24 +1,20 @@
 import unittest
 from unittest.mock import MagicMock,patch
-from peer import login ,logout,createAccount,show_online_users 
-
-
-
-
+from Peer import login ,logout,createAccount,show_online_users ,create_chatroom,searchUser
 
 
 class TestLoginFunction(unittest.TestCase):
 
     def setUp(self):
-        # Mock the tcpClientSocket
+        
         self.mock_socket = MagicMock()
         self.registryName = "192.168.56.1"
         self.registryPort = 12345
 
-    @patch('peer.print')
-    @patch('peer.receiveTCPMessage')
-    @patch('peer.validate_username')
-    @patch('peer.validate_password')
+    @patch('Peer.print')
+    @patch('Peer.receiveTCPMessage')
+    @patch('Peer.validate_username')
+    @patch('Peer.validate_password')
     def test_login_success(self, mock_validate_username, mock_validate_password, mock_receive, mock_print):
         mock_validate_username.return_value = True
         mock_validate_password.return_value = True
@@ -27,10 +23,10 @@ class TestLoginFunction(unittest.TestCase):
         self.assertEqual(result, 1)
         mock_print.assert_called_with("Logged in successfully...")
 
-    @patch('peer.print')
-    @patch('peer.receiveTCPMessage')
-    @patch('peer.validate_username')
-    @patch('peer.validate_password')
+    @patch('Peer.print')
+    @patch('Peer.receiveTCPMessage')
+    @patch('Peer.validate_username')
+    @patch('Peer.validate_password')
     def test_login_account_not_exist(self, mock_validate_username, mock_validate_password, mock_receive, mock_print):
         mock_validate_username.return_value = True
         mock_validate_password.return_value = True
@@ -39,10 +35,10 @@ class TestLoginFunction(unittest.TestCase):
         self.assertEqual(result, 0)
         mock_print.assert_called_with("Account does not exist...")
 
-    @patch('peer.print')
-    @patch('peer.receiveTCPMessage')
-    @patch('peer.validate_username')
-    @patch('peer.validate_password')
+    @patch('Peer.print')
+    @patch('Peer.receiveTCPMessage')
+    @patch('Peer.validate_username')
+    @patch('Peer.validate_password')
     def test_login_account_already_online(self, mock_validate_username, mock_validate_password, mock_receive, mock_print):
         mock_validate_username.return_value = True
         mock_validate_password.return_value = True
@@ -51,10 +47,10 @@ class TestLoginFunction(unittest.TestCase):
         self.assertEqual(result, 2)
         mock_print.assert_called_with("Account is already online...")
 
-    @patch('peer.print_colorized_text')
-    @patch('peer.receiveTCPMessage')
-    @patch('peer.validate_username')
-    @patch('peer.validate_password')
+    @patch('Peer.print_colorized_text')
+    @patch('Peer.receiveTCPMessage')
+    @patch('Peer.validate_username')
+    @patch('Peer.validate_password')
     def test_login_wrong_password(self, mock_validate_username, mock_validate_password, mock_receive, mock_print_colorized):
         mock_validate_username.return_value = True
         mock_validate_password.return_value = True
@@ -67,15 +63,15 @@ class TestLoginFunction(unittest.TestCase):
 class TestAccountCreation(unittest.TestCase):
 
     def setUp(self):
-        # Mock the socket
+        
         self.mock_socket = MagicMock()
         self.registryName = "192.168.56.1"
         self.registryPort = 12345
     
-    @patch('peer.print')
-    @patch('peer.receiveTCPMessage')
-    @patch('peer.validate_username')
-    @patch('peer.validate_password')                           
+    @patch('Peer.print')
+    @patch('Peer.receiveTCPMessage')
+    @patch('Peer.validate_username')
+    @patch('Peer.validate_password')                           
     def test_create_account_success(self, mock_validate_username, mock_validate_password, mock_receive, mock_print):
         mock_validate_username.return_value = True
         mock_validate_password.return_value = True
@@ -83,10 +79,10 @@ class TestAccountCreation(unittest.TestCase):
         createAccount("valid_user", "wrong_password", self.mock_socket, self.registryName, self.registryPort)
         mock_print.assert_called_with("Account created...")
 
-    @patch('peer.print')
-    @patch('peer.receiveTCPMessage')
-    @patch('peer.validate_username')
-    @patch('peer.validate_password')                           
+    @patch('Peer.print')
+    @patch('Peer.receiveTCPMessage')
+    @patch('Peer.validate_username')
+    @patch('Peer.validate_password')                           
     def test_create_account_exists(self, mock_validate_username, mock_validate_password, mock_receive, mock_print):
         mock_validate_username.return_value = True
         mock_validate_password.return_value = True
@@ -98,50 +94,99 @@ class TestAccountCreation(unittest.TestCase):
 class TestLogoutFunction(unittest.TestCase):
 
     def setUp(self):
-        # Mock the tcpClientSocket and timer
+        
         self.mock_socket = MagicMock()
         self.mock_timer = MagicMock()
         self.registryName = "192.168.56.1"
         self.registryPort = 12345
         self.loginCredentials = ["username", "password"]
 
-    @patch('peer.sendTCPMessage')
-    @patch('peer.logging')
+    @patch('Peer.sendTCPMessage')
+    @patch('Peer.logging')
     def test_logout_with_option_1(self, mock_logging, mock_send):
         logout(1, self.loginCredentials, self.mock_timer, self.mock_socket, self.registryName, self.registryPort)
         
-        # Check if the timer's cancel method was called
         self.mock_timer.cancel.assert_called_once()
-
-        # Check if the correct logout message was sent
         mock_send.assert_called_with(self.mock_socket, "LOGOUT username")
-
-        # Check if the logging was called with the correct message
         mock_logging.info.assert_called_with("Send to 192.168.56.1:12345 -> LOGOUT username")
 
 class TestShowOnlineUsersFunction(unittest.TestCase):
 
     def setUp(self):
-        # Mock the tcpClientSocket
+        
         self.mock_socket = MagicMock()
         self.registryName = "registry_host"
         self.registryPort = 12345
 
-    @patch('peer.print')
-    @patch('peer.receiveTCPMessage')
-    @patch('peer.sendTCPMessage')
-    @patch('peer.logging')
+    @patch('Peer.print')
+    @patch('Peer.receiveTCPMessage')
+    @patch('Peer.sendTCPMessage')
+    @patch('Peer.logging')
     def test_show_online_users(self, mock_logging, mock_send, mock_receive, mock_print):
         mock_receive.return_value = "Online Users: \nuser1\nuser2\n"
         show_online_users(self.mock_socket, self.registryName, self.registryPort)
 
-        # Check if the correct message was sent
+        
         mock_send.assert_called_with(self.mock_socket, "SHOW_ONLINE_USERS")
-
         mock_logging.info.assert_called_with("Received from registry_host -> Online Users: \nuser1\nuser2\n")
-
-        # Check if the print function was called with the correct response
         mock_print.assert_called_with('Online Users: \nuser1\nuser2\n')
+
+class TestCreateChatroomFunction(unittest.TestCase):
+
+    def setUp(self):
+        self.mock_socket = MagicMock()
+
+    @patch('Peer.print_colorized_text')  
+    def test_create_chatroom_already_exists(self, mock_print_colorized_text):
+        self.mock_socket.recv.return_value = "room-already-exists".encode()
+        create_chatroom("test_chatroom", self.mock_socket)
+        self.mock_socket.send.assert_called_with("CREATE_CHATROOM test_chatroom".encode())
+        mock_print_colorized_text.assert_called_with("Chatroom with similar name already exists...", "RED")
+
+    @patch('Peer.print_colorized_text')  
+    def test_create_chatroom_success(self, mock_print_colorized_text):
+     
+        self.mock_socket.recv.return_value = "room-create-success".encode()
+        create_chatroom("new_chatroom", self.mock_socket)
+        self.mock_socket.send.assert_called_with("CREATE_CHATROOM new_chatroom".encode())
+        mock_print_colorized_text.assert_called_with("Chatroom created successfully...", "GREEN")
+
+class TestSearchUserFunction(unittest.TestCase):
+
+    def setUp(self):
+        self.mock_socket = MagicMock()
+
+    @patch('Peer.print_colorized_text')
+    def test_search_user_success(self,mock_print_colorized_text):
+        
+        self.mock_socket.recv.return_value = "search-success user_ip:user_port".encode()        
+        result = searchUser("test_user", self.mock_socket)    
+        self.mock_socket.send.assert_called_with("SEARCH test_user".encode())
+
+        self.assertEqual(result, "user_ip:user_port")
+        mock_print_colorized_text.assert_any_call("test_user is found successfully...","GREEN")
+
+
+    @patch('Peer.print_colorized_text')
+    def test_search_user_not_online(self,mock_print_colorized_text):
+        
+        self.mock_socket.recv.return_value = "search-user-not-online".encode()
+        result = searchUser("test_user", self.mock_socket)
+        self.mock_socket.send.assert_called_with("SEARCH test_user".encode())
+
+        self.assertEqual(result, 0)
+        mock_print_colorized_text.assert_called_with("test_user is not online...","RED")
+
+
+
+    @patch('Peer.print_colorized_text')
+    def test_search_user_not_found(self, mock_print_colorized_text):
+        
+        self.mock_socket.recv.return_value = "search-user-not-found".encode()
+        result = searchUser("test_user", self.mock_socket)
+
+        self.assertIsNone(result)
+        mock_print_colorized_text.assert_called_with("test_user is not found","RED")
 
 
 if __name__ == '__main__':

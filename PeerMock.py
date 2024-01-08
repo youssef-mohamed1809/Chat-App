@@ -56,8 +56,8 @@ def validate_username(username):
          if ' ' in username:
              raise ValueError("Username cannot contain a space character.")    
          # Check for special characters and numbers in username
-         if not username.isalpha():
-             raise ValueError("Username can only contain letters.")
+        #  if not username.isalpha():
+        #      raise ValueError("Username can only contain letters.")
          return True
      except ValueError as e:
          print_colorized_text(f"Error validating username: {e}",'RED')
@@ -193,7 +193,8 @@ class peerMain:
     # peer initializations
     def __init__(self):
         # ip address of the registry
-        self.registryName = input("Enter IP address of registry: ").strip()
+        self.userInput = input("Enter IP address of registry: ").split()
+        self.registryName = self.userInput[0]
         # port number of the registry
         self.registryPort = 15600
         # tcp socket connection to registry
@@ -223,157 +224,32 @@ class peerMain:
         self.online_peers = {}
         
     def run(self):
-        choice = "0"
         # log file initialization
         logging.basicConfig(filename="peer.log", level=logging.INFO)
         # as long as the user is not logged out, asks to select an option in the menu
-        while choice != "3":
-            # menu selection prompt
-            print("Choose: ")
-            print_colorized_text("Create account: 1\nLogin: 2",'GREEN')
-            print_colorized_text("Logout: 3",'RED')
-            print_colorized_text("Show Online Users: 4","BLUE")
-            print_colorized_text("Private Chat with a user: 5","BLUE")
-            print_colorized_text("Show Available Rooms: 6","BLUE")
-            print_colorized_text("Create Chatroom: 7", "BLUE")
-            print_colorized_text("Join Chatroom: 8", "BLUE")
-            choice = input()
-            # if choice is 1, creates an account with the username
-            # and password entered by the user
-            if choice == "1":
-                username = input("Username: ")
-                password = input("Password: ")
-                createAccount(username, password,self.tcpClientSocket,self.registryName,self.registryPort)
-            # if choice is 2 and user is not logged in, asks for the username
-            # and the password to login
-            elif choice == "2" and not self.isOnline:
-                username = input("Username: ")
-                password = input("Password: ")
-                # asks for the port number for server's tcp socket
-                try:
-                    peerServerPort = int(input("Enter a port number for peer server: "))
-                    if peerServerPort < 0 or peerServerPort > 65535  :
-                        raise Exception("Error")
-                        
-                except Exception as e:
-                    print_colorized_text("Please enter a valid value for server port","RED")
-                    logging.error("ValueError: {0}".format(e))
-                    continue
-                status = login(username, password, peerServerPort,self.tcpClientSocket,self.registryName,self.registryPort)
+        createAccount(self.userInput[1], self.userInput[2],self.tcpClientSocket,self.registryName,self.registryPort)
+        status = login(self.userInput[1], self.userInput[2], self.userInput[3],self.tcpClientSocket,self.registryName,self.registryPort)
                 # is user logs in successfully, peer variables are set
-                if status == 1:
+        if status == 1:
                     self.isOnline = True
-                    self.loginCredentials = (username, password)
-                    self.peerServerPort = peerServerPort
+                    self.loginCredentials = (self.userInput[1], self.userInput[2])
+                    self.peerServerPort = int(self.userInput[3])
                     # hello message is sent to registry
                     self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort)
                     self.peerServer.start()
                     self.sendHelloMessage()
-            # if choice is 3 and user is logged in, then user is logged out
-            # and peer variables are set, and server and client sockets are closed
-            elif choice == "3" and self.isOnline:
-                logout(1,self.loginCredentials, self.timer,self.tcpClientSocket,self.registryName,self.registryPort)
-                self.isOnline = False
-                self.loginCredentials = (None, None)
-                self.peerServer.isOnline = False
-                self.peerServer.tcpServerSocket.close()
-                if self.peerClient is not None:
-                    self.peerClient.tcpClientSocket.close()
-                print("Logged out successfully")
-            # is peer is not logged in and exits the program
-            elif choice == "3":
-                logout(2,self.loginCredentials, self.timer,self.tcpClientSocket,self.registryName,self.registryPort)
-            # if choice is 4 and user is online, then user is asked
-            # for a username that is wanted to be searched
-                
-            elif choice == "4" and self.isOnline:
-                show_online_users(self.tcpClientSocket,self.registryName,self.registryPort)
-          
-
-            elif choice is "5" and self.isOnline:
-                username = input("Enter the username of the user to start chat: ")
-                searchStatus = searchUser(username,self.tcpClientSocket)
-                # if searched user is found, then its ip address and port number is retrieved
-                # and a client thread is created
-                # main process waits for the client thread to finish its chat
+        # if self.timer is not None:
+        #         self.timer.cancel()
+        logout(2,self.loginCredentials, self.timer,self.tcpClientSocket,self.registryName,self.registryPort)
+        self.isOnline = False
+        self.loginCredentials = (None, None)
+        self.peerServer.isOnline = False
+        self.peerServer.tcpServerSocket.close()
+        if self.peerClient is not None:
+            self.peerClient.tcpClientSocket.close()
+        print("Logged out successfully")
         
-                if searchStatus is not None and searchStatus is not 0:
-                    searchStatus = searchStatus.split(":")
-                    self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]) , self.loginCredentials[0], self.peerServer, None)
-                    self.peerClient.start()
-                    self.peerClient.join()
-            elif choice is "6" and self.isOnline:
-                showChatrooms(self.tcpClientSocket)
-            elif choice == '7' and self.isOnline:
-                chatroom = input("Please enter chatroom name: ")
-                if chatroom == '':
-                    print_colorized_text("Please enter a chatroom name", "RED")
-                    continue
-                create_chatroom(chatroom,self.tcpClientSocket)
-                
-            elif choice == '8' and self.isOnline:
-                chatroom = input("Please enter chatroom name: ")
-                if chatroom == '':
-                    print_colorized_text("Please enter a chatroom name", "RED")
-                    continue
-                message = f"JOIN_CHATROOM {chatroom}"
-                self.tcpClientSocket.send(message.encode())
-                response = self.tcpClientSocket.recv(1024).decode().split()
-                if response[0] == "joined-room":
-                        CH = ChatroomHandler()
-                        self.TCPRoomThread = Thread(target=CH.tcpChatHandler, args=(self,))
-                        self.UDPRoomThread = Thread(target=CH.udpChatHandler, args=(self,))
-                        self.TCPRoomThread.start()
-                        self.UDPRoomThread.start()
-                        print("Welcome to "+ chatroom)
-                        for peer in response[1:]:
-                            username, addressIP, addressPort = peer.split(":")
-                            self.online_peers[username] = (addressIP, int(addressPort))
-                        userMessage = input()
-                        while userMessage != ":end":
-                            userMessage = format_messages(userMessage)
-                            play_sound('messagesent.wav')
-                            CH.broadcastMessage(self, userMessage)
-                            userMessage = input()
-                        self.tcpClientSocket.send(f"LEAVE_CHATROOM {chatroom}".encode())
-                        CH.running = False
-                        self.TCPRoomThread.join()
-                        self.UDPRoomThread.join()
-                        self.online_peers.clear()
-                        print("Left "+chatroom+" chat room...")
-                elif response[0] == "room-not-found":
-                        print_colorized_text("Chat room does not exist...","RED")
-  
-            elif choice == "OK" and self.isOnline:
-                okMessage = "OK " + self.loginCredentials[0]
-                self.peerServer.connectedPeerSocket.send(okMessage.encode())
-                self.peerClient = PeerClient(self.peerServer.connectedPeerIP, self.peerServer.connectedPeerPort , self.loginCredentials[0], self.peerServer, "OK")
-                self.peerClient.start()
-                self.peerClient.join()
-            # if user rejects the chat request then reject message is sent to the requester side
-            # elif choice == "REJECT" and self.isOnline:
-               
-            # if choice is cancel timer for hello message is cancelled
-            elif choice == 'REJECT' and self.isOnline:
-                self.peerServer.connectedPeerSocket.send("REJECT".encode())
-                self.peerServer.isChatRequested = 0
-                logging.info("Send to " + self.peerServer.connectedPeerIP + " -> REJECT")
-            # if choice is cancel timer for hello message is cancelled     
-            
-            elif choice == "CANCEL":
-                if self.timer is not None:
-                  self.timer.cancel()
-                  break
-                
-            elif choice == '2':
-                print_colorized_text("You are already logged in","RED")
-            elif choice in ['4','5','6','7','8']:
-                print_colorized_text("Please login first","RED")    
-        # if main process is not ended with cancel selection
-        # socket of the client is closed
-        if choice != "CANCEL":
-            self.tcpClientSocket.close()
-   
+       
  
 
 
