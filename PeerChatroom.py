@@ -15,17 +15,17 @@ class ChatroomHandler:
                 readable, _, _ = select.select(inputs, [], [],0.2)
                 if not readable:
                     continue
-                message = peer.tcpClientSocket.recv(1024).decode().split() 
-                if not message:
+                msg = peer.tcpClientSocket.recv(1024).decode().split() 
+                if not msg:
                     continue
-                if message[0] == "JOINED":
-                    peer.online_peers[message[1]] = (message[2].split(":")[0], int(message[2].split(":")[1]))
-                    print_colorized_text(message[1], "YELLOW",'')
+                if msg[0] == "USER_JOINED":
+                    peer.online_peers[msg[1]] = (msg[2].split(":")[0], int(msg[2].split(":")[1]))
+                    print_colorized_text(msg[1], "YELLOW",'')
                     print(" joined the chat...")
-                elif message[0] == "LEFT":
-                    if message[1] in peer.online_peers:
-                        del peer.online_peers[message[1]]
-                    print_colorized_text(message[1], "YELLOW",'')
+                elif msg[0] == "USER_LEFT":
+                    if msg[1] in peer.online_peers:
+                        del peer.online_peers[msg[1]]
+                    print_colorized_text(msg[1], "YELLOW",'')
                     print(" left the chat..")
 
             except OSError as oErr:
@@ -39,16 +39,16 @@ class ChatroomHandler:
             readable, _, _ = select.select(inputs, [], [],0.2)
             for s in readable:
                 if s is peer.udpClientSocket:
-                    message, clientAddress = peer.udpClientSocket.recvfrom(1024)
-                    temp = message.decode().split()
-                    username = temp[0]
-                    message_content = " ".join(temp[1:])
+                    msg, clientAddress = peer.udpClientSocket.recvfrom(1024)
+                    msg_split = msg.decode().split()
+                    username = msg_split[0]
+                    msg_content = " ".join(msg_split[1:])
                     if username not in peer.online_peers:
                         peer.online_peers[username] = clientAddress
                     print_colorized_text(username+":", "YELLOW", '')
-                    print(message_content)
+                    print(msg_content)
 
-    def broadcast_message(self,peer, message):
+    def broadcastMessage(self,peer, message):
         for _, address in peer.online_peers.items():
             peer.udpClientSocket.sendto(str(peer.loginCredentials[0] + " " + message).encode(), address)
 
