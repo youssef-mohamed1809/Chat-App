@@ -13,9 +13,9 @@ and UDP protocols.
 <p>One of our main goals was to make this application with the users ease in mind. The user only needs to install a few libraries to run the application, all of which will be listed below. All you have to do is copy these commands into your terminal. </p>
 
 <ul>
-  <li></li>
-  <li></li>
-  <li></li>
+  <li>pip install colorama</li>
+  <li>pip install simpleaudio</li>
+  <li>pip install bcrypt</li>
 </ul>
 
 <p>There are two ways to install MongoDB to be able to successfully use out chat app, both will be provided below (These steps are taking into consideration the users that do not know what MongoDB is. Users who have MongoDB can skip some steps if necessary)</p>
